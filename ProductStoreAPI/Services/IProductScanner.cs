@@ -4,5 +4,5 @@ namespace ProductStoreAPI.Services;
 
 public interface IProductScanner
 {
-    Task<ScanSuggestion> ScanAsync(IReadOnlyList<ProductImage> images, CancellationToken ct);
+    Task<ScanSuggestion> ScanAsync(IReadOnlyList<ScanImage> images, CancellationToken ct);
 }

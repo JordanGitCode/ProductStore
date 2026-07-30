@@ -1,3 +1,3 @@
 namespace ProductStoreAPI.Contracts;
 
-public record ProductImage(byte[] Content, string ContentType);
+public record ScanImage(byte[] Content, string ContentType);

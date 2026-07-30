@@ -1,0 +1,141 @@
+<a class="back-link" routerLink="/home">&larr; Back to catalog</a>
+
+@if (loading()) {
+  <div class="page-status">
+    <span class="loader" aria-label="Loading product"></span>
+    Loading…
+  </div>
+} @else if (error()) {
+  <p class="detail-error">{{ error() }}</p>
+} @else if (product(); as product) {
+  <article class="detail">
+    <div class="carousel">
+      <div class="detail-media">
+        @if (loadingContent()) {
+          <span class="loader" aria-label="Loading photos"></span>
+        } @else if (currentImageId(); as imageId) {
+          <img [src]="productService.imageUrl(product.id, imageId)" [alt]="product.name" />
+        } @else {
+          <span class="card-media-placeholder">No photo</span>
+        }
+      </div>
+
+      @if (imageCount() > 1) {
+        <button
+          type="button"
+          class="carousel-nav carousel-prev"
+          (click)="previousImage()"
+          aria-label="Previous photo"
+        >
+          &lsaquo;
+        </button>
+        <button
+          type="button"
+          class="carousel-nav carousel-next"
+          (click)="nextImage()"
+          aria-label="Next photo"
+        >
+          &rsaquo;
+        </button>
+
+        <div class="carousel-dots">
+          @for (imageId of imageIds(); track imageId; let i = $index) {
+            <button
+              type="button"
+              class="carousel-dot"
+              [class.active]="i === imageIndex()"
+              (click)="imageIndex.set(i)"
+              [attr.aria-label]="'Photo ' + (i + 1)"
+            ></button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="detail-body">
+      @if (editing()) {
+        <form class="form" (submit)="save($event)">
+          <label class="field">
+            <span class="field-label">Name</span>
+            <input type="text" name="name" [(ngModel)]="editName" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Description</span>
+            <textarea name="description" rows="3" [(ngModel)]="editDescription"></textarea>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Price</span>
+            <input type="number" name="price" min="0" step="0.01" [(ngModel)]="editPrice" />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Category</span>
+            <select name="productCategoryId" [(ngModel)]="editCategoryId">
+              @for (category of categories(); track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+              @if (suggestedCategoryIsNew()) {
+                <option [value]="CREATE_CATEGORY">
+                  + Create "{{ product.suggestedCategory }}"
+                </option>
+              }
+            </select>
+          </label>
+
+          @if (saveError()) {
+            <p class="detail-error">{{ saveError() }}</p>
+          }
+
+          <div class="button-row">
+            <button class="button" type="submit" [disabled]="saving()">
+              {{ saving() ? 'Saving…' : 'Save' }}
+            </button>
+            <button class="button-secondary" type="button" (click)="cancelEdit()">Cancel</button>
+          </div>
+        </form>
+      } @else {
+        <h1 class="detail-title">{{ product.name }}</h1>
+        <p class="detail-price">{{ product.price | currency: 'R' }}</p>
+
+        <p class="detail-description">{{ product.description || 'No description.' }}</p>
+
+        <button class="button" type="button" (click)="startEdit()">Edit</button>
+      }
+
+      <dl class="detail-meta">
+        <dt>Scan</dt>
+        <dd>{{ product.scanStatus }}</dd>
+
+        @if (product.suggestedName) {
+          <dt>Suggested name</dt>
+          <dd>
+            {{ product.suggestedName }}
+            @if (editing()) {
+              <button type="button" class="use-suggestion" (click)="useName()">Use</button>
+            }
+          </dd>
+        }
+        @if (product.suggestedCategory) {
+          <dt>Suggested category</dt>
+          <dd>
+            {{ product.suggestedCategory }}
+            @if (editing()) {
+              <button type="button" class="use-suggestion" (click)="useCategory()">Use</button>
+            }
+          </dd>
+        }
+        @if (product.suggestedDescription) {
+          <dt>Suggested description</dt>
+          <dd>
+            {{ product.suggestedDescription }}
+            @if (editing()) {
+              <button type="button" class="use-suggestion" (click)="useDescription()">Use</button>
+            }
+          </dd>
+        }
+      </dl>
+    </div>
+  </article>
+}

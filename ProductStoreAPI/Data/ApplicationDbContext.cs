@@ -11,5 +11,6 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<Product> Products => Set<Product>();
-    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();    
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+    public DbSet<ProductImage> ProductImages => Set<ProductImage>();
 }

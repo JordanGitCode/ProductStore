@@ -1,0 +1,103 @@
+<h1 class="form-title">Add a product</h1>
+
+<form class="form" (submit)="submit($event)">
+  <div class="field">
+    <span class="field-label">Photos</span>
+
+    <div class="button-row">
+      <button class="button" type="button" (click)="openCamera()">
+        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2a1.5 1.5 0 0 0 1.25-.67l.8-1.2A1.5 1.5 0 0 1 10 4.5h4a1.5 1.5 0 0 1 1.25.63l.8 1.2A1.5 1.5 0 0 0 17.3 7h2.2A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />
+          <circle cx="12" cy="12.5" r="3.25" />
+        </svg>
+        Take photos
+      </button>
+
+      <!-- Label wrapping a hidden input: gives the library picker a real button. -->
+      <label class="button-secondary">
+        <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m4 16 4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16" stroke-linecap="round" />
+          <circle cx="15.5" cy="9" r="1.25" />
+        </svg>
+        Choose photos
+        <input type="file" accept="image/*" multiple hidden (change)="onPhotosSelected($event)" />
+      </label>
+    </div>
+
+    <span class="field-hint">
+      Photos are all you need. They're scanned in the background to suggest a name, description and
+      category — you can edit everything afterwards.
+    </span>
+  </div>
+
+  @if (cameraError()) {
+    <p class="detail-error">{{ cameraError() }}</p>
+
+    <!-- Fallback when getUserMedia is unavailable or blocked: the OS camera app via
+         a file input still works, one shot per tap. -->
+    <label class="button-secondary">
+      Use device camera
+      <input type="file" accept="image/*" capture="environment" hidden (change)="onPhotosSelected($event)" />
+    </label>
+  }
+
+  @if (previews().length) {
+    <div class="preview-grid">
+      @for (preview of previews(); track preview; let i = $index) {
+        <div class="preview-tile">
+          <img class="preview" [src]="preview" alt="Selected photo" />
+          <button
+            type="button"
+            class="preview-remove"
+            (click)="removePhoto(i)"
+            [attr.aria-label]="'Remove photo ' + (i + 1)"
+          >
+            &times;
+          </button>
+        </div>
+      }
+    </div>
+
+    <p class="field-hint">{{ previews().length }} photo{{ previews().length === 1 ? '' : 's' }} ready to upload.</p>
+  }
+
+  @if (error()) {
+    <p class="detail-error">{{ error() }}</p>
+  }
+
+  <button class="button" type="submit" [disabled]="submitting() || photos().length === 0">
+    {{ submitting() ? 'Uploading…' : 'Create listing' }}
+  </button>
+</form>
+
+@if (cameraOpen()) {
+  <div class="camera" role="dialog" aria-modal="true" aria-label="Camera">
+    <!-- playsinline is required on iOS, which otherwise hijacks the stream into a
+         fullscreen native player and hides the shutter controls. -->
+    <video #video class="camera-video" playsinline muted autoplay></video>
+
+    @if (!stream()) {
+      <div class="camera-status">
+        <span class="loader"></span>
+        Starting camera…
+      </div>
+    }
+
+    <div class="camera-bar">
+      <button class="camera-action" type="button" (click)="closeCamera()">Done</button>
+
+      <button
+        class="camera-shutter"
+        type="button"
+        (click)="capturePhoto()"
+        [disabled]="!stream()"
+        aria-label="Take photo"
+      ></button>
+
+      <span class="camera-count">
+        {{ photos().length }} photo{{ photos().length === 1 ? '' : 's' }}
+      </span>
+    </div>
+  </div>
+}

@@ -1,0 +1,11 @@
+{
+  "//": "Targets the https profile (7183). Plain http on 5100 is not usable here: UseHttpsRedirection 307s it to https://localhost:7183, and that redirect would be handed to the phone, which cannot reach localhost. secure:false accepts the self-signed dev certificate.",
+  "/product": {
+    "target": "https://localhost:7183",
+    "secure": false
+  },
+  "/category": {
+    "target": "https://localhost:7183",
+    "secure": false
+  }
+}

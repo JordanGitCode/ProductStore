@@ -1,0 +1,39 @@
+@if (loading()) {
+  <div class="page-status">
+    <span class="loader" aria-label="Loading products"></span>
+    Loading products…
+  </div>
+} @else if (error()) {
+  <div class="page-status">
+    <p class="detail-error">{{ error() }}</p>
+    <button class="button-secondary" type="button" (click)="load()">Try again</button>
+  </div>
+} @else {
+  <div class="card-grid">
+    @for (product of products(); track product.id) {
+      <a class="card-link" [routerLink]="['/product', product.id]">
+      <article class="card">
+        <div class="card-media">
+          @if (product.imageId; as imageId) {
+            <img
+              [src]="productService.imageUrl(product.id, imageId, 600)"
+              [alt]="product.name"
+              loading="lazy"
+            />
+          } @else {
+            <span class="card-media-placeholder">No photo</span>
+          }
+        </div>
+
+        <div class="card-body">
+          <h3 class="card-title">{{ product.name }}</h3>
+          <p class="card-description">{{ product.description }}</p>
+          <p class="card-price">{{ product.price | currency: 'R' }}</p>
+        </div>
+      </article>
+      </a>
+    } @empty {
+      <p class="card-grid-empty">No products yet.</p>
+    }
+  </div>
+}

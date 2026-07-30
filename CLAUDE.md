@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Golden rule: KEEP IT SIMPLE
+
+This rule outranks everything else in this file. Do the simplest thing that works. Do not add abstractions, patterns, or dependencies beyond what the task in front of you needs — no repository layer over EF, no mapping library, no error handling for cases that cannot happen, no interface with one implementation and no second one planned. Do not refactor or tidy code the task did not ask you to touch.
+
+If a task seems to genuinely need a new pattern or dependency, say so and ask. Do not build it and explain afterwards.
+
 ## Goal
 
 ProductStore is a product management application. A user photographs an item, uploads the photos to create a listing, and the app scans those photos and returns suggested values for the listing's fields — the user can accept or edit any of them. Listings are browsed through a catalog view with sorting and filtering.
@@ -17,9 +23,15 @@ The core flow to build, in order:
 
 ## Decided vs. open
 
-Fixed: the API is C# / .NET, and the frontend is Angular. Image storage and hosting are still open — present options rather than assuming a choice, and do not silently introduce a dependency that settles one of them.
+Fixed: the API is C# / .NET, and the frontend is Angular. Hosting is still open — present options rather than assuming a choice, and do not silently introduce a dependency that settles it.
 
 The frontend does not exist in this repo yet.
+
+## Image storage
+
+**Decision: photo bytes live in SQL Server (`varbinary(max)`) for now.** Chosen because it adds no infrastructure, no storage config, no orphaned-file cleanup, and is covered by the existing database backup — the simplest thing that works at this stage.
+
+The known tradeoff is accepted deliberately: this bloats the database and loads whole images into memory per request. It is fine at dev scale and wrong at real scale. Moving to blob storage later means changing where bytes are read and written, not the shape of the listing model — so do not pre-build a storage abstraction for a migration that has not been scheduled.
 
 ## Photo scanning
 
@@ -34,7 +46,7 @@ public interface IProductScanner
 }
 ```
 
-Its contract types live in `Contracts/`, deliberately not in `Models/` — they are transport types for the scanner, not EF entities, and keeping them out of the model avoids implying a persistence design while image storage is still open. `ScanSuggestion` carries suggested values (name, description, category) — never a committed value. Swapping providers should be a one-line change in `Program.cs`; if an implementation's details leak past this interface into the controller or service, that is a design error.
+Its contract types (`ScanImage`, `ScanSuggestion`) live in `Contracts/`, deliberately not in `Models/` — they are transport types for the scanner, not EF entities. The `Scan` prefix is load-bearing: it keeps them distinct from the `ProductImage` entity that persists photos. `ScanSuggestion` carries suggested values (name, description, category) — never a committed value. Swapping providers should be a one-line change in `Program.cs`; if an implementation's details leak past this interface into the controller or service, that is a design error.
 
 Two constraints this interface exists to protect:
 
@@ -45,7 +57,9 @@ Two constraints this interface exists to protect:
 
 The API is an early scaffold: an ASP.NET Core Web API (.NET 10) backed by SQL Server via Entity Framework Core. There is no solution file — `ProductStoreAPI/ProductStoreAPI.csproj` is the only project, and all commands run from the `ProductStoreAPI/` directory.
 
-`Product`/`ProductCategory` models and the initial migration exist, but `ProductController` returns an empty `Ok()`, `ProductService` is commented out and does not implement `IProductService`, and nothing is registered in DI yet. Nothing models photos or persists images. `IProductScanner` and its contract types exist but have **no implementation and no DI registration** — the interface is stubbed, the scanning itself is not built. The `WeatherForecast` template files are still present and can be deleted once real endpoints land.
+The read path works end to end: `ProductController` → `IProductService` → `ApplicationDbContext` → SQL Server, with `ProductService` registered in `Program.cs`. `GET /product` and `GET /product/{id:guid}` are live. There is no write path yet — no POST, PUT, or DELETE.
+
+Nothing models photos or persists images. `IProductScanner` and its contract types exist but have **no implementation and no DI registration** — the interface is stubbed, the scanning itself is not built. The `WeatherForecast` template files are still present and can be deleted once real endpoints land.
 
 ## Commands
 
@@ -70,7 +84,9 @@ dotnet ef database update
 
 ## Architecture
 
-Intended flow is Controller → Service (`IProductService`) → `ApplicationDbContext` → SQL Server. To make that real, a service must implement `IProductService`, be registered in `Program.cs` (`builder.Services.AddScoped<IProductService, ProductService>()`), and be injected into the controller — none of which is wired today.
+Flow is Controller → Service (`IProductService`) → `ApplicationDbContext` → SQL Server. Services are registered in `Program.cs` and constructor-injected; follow that pattern for new services rather than reaching for `ApplicationDbContext` from a controller.
+
+Entities are returned directly from the controller — there are no DTOs, by design (see the golden rule). Navigation properties are not `Include`d, so `Product.ProductCategory` serializes as `null`. Adding an `Include` will produce a `Product → ProductCategory → Products` cycle that `System.Text.Json` rejects, so the catalog view will need either a projection or `ReferenceHandler` — decide that when the catalog is built, not before.
 
 - **`Program.cs`** — minimal hosting entry point. Registers `ApplicationDbContext` against the `ConnectionStrings:Default` config value, controllers, and OpenAPI. OpenAPI plus the Scalar reference UI (`/scalar/v1`) are mapped only in the Development environment.
 - **`Data/ApplicationDbContext.cs`** — exposes `Products` and `ProductCategories`. There is no `OnModelCreating`; the schema comes entirely from convention, so `Product.ProductCategory` produces a required FK with cascade delete, and strings map to `nvarchar(max)`. Add explicit configuration here if you need lengths or different delete behavior.
