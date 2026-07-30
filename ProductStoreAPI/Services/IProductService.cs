@@ -18,4 +18,6 @@ public interface IProductService
     Task<IReadOnlyList<ProductImage>> GetImagesAsync(Guid productId);
     Task<ProductImage?> GetImageAsync(Guid productId, Guid imageId);
     Task MarkScanPendingAsync(Guid productId);
+    Task MarkPricePendingAsync(Guid productId);
+    Task<IReadOnlyList<PriceComparable>> GetPriceComparablesAsync(Guid productId);
 }

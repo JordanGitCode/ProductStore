@@ -21,6 +21,20 @@ builder.Services.AddHttpClient<IProductScanner, OllamaProductScanner>(client =>
     client.Timeout = TimeSpan.FromMinutes(5);
 });
 
+builder.Services.AddSingleton<PriceQueue>();
+builder.Services.AddHostedService<PriceWorker>();
+
+// Prices come straight from Gumtree SA's search page (ZAR). Browser-like headers are
+// required or Gumtree serves a degraded page without prices.
+builder.Services.AddHttpClient<IPriceSuggester, GumtreePriceSuggester>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Gumtree:BaseUrl"] ?? "https://www.gumtree.co.za");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36");
+    client.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+    client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-ZA,en;q=0.9");
+});
+
 builder.Services.AddCors(options =>
     options.AddPolicy("AngularDev", policy => 
         policy.WithOrigins(

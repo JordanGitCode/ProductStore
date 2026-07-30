@@ -141,4 +141,20 @@ public class ProductService : IProductService
         product.ScanStatus = ScanStatus.Pending;
         await _db.SaveChangesAsync();
     }
+
+    public async Task MarkPricePendingAsync(Guid productId)
+    {
+        var product = await _db.Products.FindAsync(productId);
+        if (product is null) return;
+        product.PriceStatus = PriceStatus.Pending;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<PriceComparable>> GetPriceComparablesAsync(Guid productId)
+    {
+        return await _db.PriceComparables
+            .AsNoTracking()
+            .Where(c => c.ProductId == productId)
+            .ToListAsync();
+    }
 }

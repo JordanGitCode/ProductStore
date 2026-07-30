@@ -13,12 +13,14 @@ public class ProductController : ControllerBase
 
     private readonly IProductService _products;
     private readonly ScanQueue _scanQueue;
+    private readonly PriceQueue _priceQueue;
     private readonly ILogger<ProductController> _log;
 
-    public ProductController(IProductService products, ScanQueue scanQueue, ILogger<ProductController> log)
+    public ProductController(IProductService products, ScanQueue scanQueue, PriceQueue priceQueue, ILogger<ProductController> log)
     {
         _products = products;
         _scanQueue = scanQueue;
+        _priceQueue = priceQueue;
         _log = log;
     }
 
@@ -176,6 +178,34 @@ public class ProductController : ControllerBase
             product.SuggestedName,
             product.SuggestedDescription,
             product.SuggestedCategory,
+        });
+    }
+
+    // Manual: searches the web for similar listings and suggests a price from them.
+    // Best run after a scan, since it searches on the suggested name.
+    [HttpPost("{id:guid}/price")]
+    public async Task<IActionResult> SuggestPrice(Guid id)
+    {
+        if (await _products.GetProductByIdAsync(id) is null)
+            return NotFound();
+
+        await _products.MarkPricePendingAsync(id);
+        await _priceQueue.EnqueueAsync(id);
+
+        return Accepted();
+    }
+
+    [HttpGet("{id:guid}/price")]
+    public async Task<IActionResult> GetPriceSuggestion(Guid id)
+    {
+        var product = await _products.GetProductByIdAsync(id);
+        if (product is null) return NotFound();
+
+        return Ok(new
+        {
+            product.PriceStatus,
+            product.SuggestedPrice,
+            Comparables = await _products.GetPriceComparablesAsync(id),
         });
     }
 }
